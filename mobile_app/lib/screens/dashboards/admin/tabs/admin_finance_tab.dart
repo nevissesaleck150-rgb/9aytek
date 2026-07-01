@@ -74,24 +74,34 @@ class _AdminFinanceTabState extends State<AdminFinanceTab> {
             color: _blue,
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _miniCard(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 330;
+              final cards = [
+                _miniCard(
                   label: 'PART PLATEFORME',
                   value: '${platformShare.toStringAsFixed(2)} MRU',
                   color: AppColors.primaryBlue,
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _miniCard(
+                _miniCard(
                   label: 'NB. TRANSACTIONS',
                   value: _transactions.length.toString(),
                   color: AppColors.primaryBlue,
                 ),
-              ),
-            ],
+              ];
+              if (narrow) {
+                return Column(
+                  children: [cards[0], const SizedBox(height: 10), cards[1]],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: cards[0]),
+                  const SizedBox(width: 10),
+                  Expanded(child: cards[1]),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 24),
 
@@ -190,22 +200,42 @@ class _AdminFinanceTabState extends State<AdminFinanceTab> {
                           const SizedBox(height: 8),
                           const Divider(color: AppColors.lightBlue, height: 1),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _shareItem('Total', total, Colors.black),
-                              _shareItem('Marchand', vendorShare, _blue),
-                              _shareItem(
-                                'Influenceur',
-                                influencerShare,
-                                AppColors.primaryBlue,
-                              ),
-                              _shareItem(
-                                'Plateforme',
-                                platShare,
-                                AppColors.primaryBlue,
-                              ),
-                            ],
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final itemWidth = constraints.maxWidth < 360
+                                  ? (constraints.maxWidth - 8) / 2
+                                  : (constraints.maxWidth - 24) / 4;
+                              return Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _shareItem(
+                                    'Total',
+                                    total,
+                                    Colors.black,
+                                    width: itemWidth,
+                                  ),
+                                  _shareItem(
+                                    'Marchand',
+                                    vendorShare,
+                                    _blue,
+                                    width: itemWidth,
+                                  ),
+                                  _shareItem(
+                                    'Influenceur',
+                                    influencerShare,
+                                    AppColors.primaryBlue,
+                                    width: itemWidth,
+                                  ),
+                                  _shareItem(
+                                    'Plateforme',
+                                    platShare,
+                                    AppColors.primaryBlue,
+                                    width: itemWidth,
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                           if (tx['created_at'] != null) ...[
                             const SizedBox(height: 8),
@@ -314,15 +344,18 @@ class _AdminFinanceTabState extends State<AdminFinanceTab> {
               overflow: TextOverflow.ellipsis,
             ),
             const Spacer(),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+                maxLines: 1,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -330,27 +363,50 @@ class _AdminFinanceTabState extends State<AdminFinanceTab> {
     );
   }
 
-  Widget _shareItem(String label, double value, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-          ),
+  Widget _shareItem(
+    String label,
+    double value,
+    Color color, {
+    required double width,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.lightBlue),
         ),
-        const SizedBox(height: 2),
-        Text(
-          value.toStringAsFixed(2),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 3),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value.toStringAsFixed(2),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

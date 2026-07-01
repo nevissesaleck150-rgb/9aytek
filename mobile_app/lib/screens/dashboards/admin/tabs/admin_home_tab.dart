@@ -109,9 +109,9 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
-    final incompleteOrders = _orders
-        .where((o) => o['status'] != 'delivered')
-        .length;
+    final incompleteOrders =
+        (_stats['incomplete_orders'] as num?)?.toInt() ??
+        _orders.where((o) => o['status'] != 'delivered').length;
     final activeDrivers = (_stats['active_drivers'] ?? 0) as int;
     final activeVendors = (_stats['active_vendors'] ?? 0) as int;
     final pending = (_stats['pending_approvals'] ?? 0) as int;

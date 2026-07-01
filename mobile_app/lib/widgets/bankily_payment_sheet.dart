@@ -141,7 +141,9 @@ class _BankilySheetState extends State<_BankilySheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ..._split.rows.map(_splitCard),
+                ..._split.rows
+                    .where((row) => row.label != 'Plateforme')
+                    .map(_splitCard),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,

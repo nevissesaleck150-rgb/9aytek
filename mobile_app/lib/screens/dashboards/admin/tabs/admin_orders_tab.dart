@@ -146,7 +146,9 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     final delivered = _orders.where((o) => o['status'] == 'delivered').length;
-    final pending = _orders.where((o) => o['status'] == 'pending').length;
+    final notDelivered = _orders
+        .where((o) => o['status'] != 'delivered')
+        .length;
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -182,8 +184,8 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
               const SizedBox(width: 12),
               Expanded(
                 child: _statCard(
-                  'EN ATTENTE',
-                  pending.toString(),
+                  'NON LIVRÉES',
+                  notDelivered.toString(),
                   AppColors.primaryBlue,
                   Icons.access_time,
                 ),

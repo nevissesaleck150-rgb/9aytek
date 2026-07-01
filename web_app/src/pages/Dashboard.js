@@ -10,6 +10,7 @@ const Dashboard = () => {
         active_influencers: 0,
         active_drivers: 0,
         total_orders: 0,
+        incomplete_orders: 0,
         daily_orders: 0,
         daily_topup_orders: 0,
         daily_course_orders: 0,
@@ -43,7 +44,7 @@ const Dashboard = () => {
         fetchData();
     }, []);
 
-    const incompleteOrders = transactions.filter(
+    const incompleteOrders = stats.incomplete_orders ?? transactions.filter(
         (order) => order.status !== 'delivered'
     ).length;
     const activeCouriers = stats.active_drivers || 0;

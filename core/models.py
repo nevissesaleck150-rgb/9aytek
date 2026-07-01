@@ -162,9 +162,9 @@ class OrderItem(models.Model):
         unit_price = Decimal(str(raw_price))
         total_item_price = unit_price * self.quantity
         if self.influencer_ad:
-            self.platform_share = Decimal('0.00')
+            self.platform_share = total_item_price * Decimal('0.05')
             self.vendor_share = Decimal('0.00')
-            self.influencer_share = total_item_price
+            self.influencer_share = total_item_price - self.platform_share
             self.driver_share = Decimal('0.00')
             if not self.influencer:
                 self.influencer = self.influencer_ad.influencer

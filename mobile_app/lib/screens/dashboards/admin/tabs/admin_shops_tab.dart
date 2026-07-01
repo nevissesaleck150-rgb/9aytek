@@ -320,7 +320,8 @@ class _AdminShopsTabState extends State<AdminShopsTab> {
           )
         else
           ..._shops.map((s) {
-            final logoUrl = ApiConfig.mediaUrl(s['logo']?.toString());
+            final logoPath = (s['image'] ?? s['logo'])?.toString();
+            final logoUrl = ApiConfig.mediaUrl(logoPath);
 
             return Container(
               margin: const EdgeInsets.only(bottom: 10),

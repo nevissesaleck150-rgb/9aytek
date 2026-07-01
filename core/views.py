@@ -97,6 +97,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def dashboard_stats(self, request):
         total_revenue = Order.objects.aggregate(total=Sum('total_amount'))['total'] or 0
         total_orders = Order.objects.count()
+        incomplete_orders = Order.objects.exclude(status='delivered').count()
         active_vendors = User.objects.filter(role='vendor', is_approved=True).count()
         active_influencers = User.objects.filter(role='influencer', is_approved=True).count()
         active_drivers = User.objects.filter(role='driver', is_approved=True).count()
@@ -132,6 +133,7 @@ class UserViewSet(viewsets.ModelViewSet):
         stats = {
             'total_revenue': total_revenue,
             'total_orders': total_orders,
+            'incomplete_orders': incomplete_orders,
             'daily_orders': daily_orders,
             'daily_topup_orders': daily_topup_orders,
             'daily_course_orders': daily_course_orders,
@@ -737,6 +739,8 @@ class AdPurchaseViewSet(viewsets.ModelViewSet):
         buyer = self.request.user
         ad = serializer.validated_data['ad']
         amount = Decimal(str(ad.price))
+        platform_share = amount * Decimal('0.05')
+        influencer_share = amount - platform_share
         if buyer.wallet_balance < amount:
             from rest_framework.exceptions import ValidationError
             raise ValidationError('Solde insuffisant pour acheter cette annonce.')
@@ -744,16 +748,24 @@ class AdPurchaseViewSet(viewsets.ModelViewSet):
             buyer.wallet_balance -= amount
             buyer.save(update_fields=['wallet_balance'])
             influencer = ad.influencer
-            influencer.wallet_balance += amount
+            influencer.wallet_balance += influencer_share
             influencer.save(update_fields=['wallet_balance'])
             WalletTransaction.objects.create(
                 user=buyer, amount=-amount, type='withdrawal',
                 description=f"Achat annonce: {ad.description[:50]}"
             )
             WalletTransaction.objects.create(
-                user=influencer, amount=amount, type='sale',
+                user=influencer, amount=influencer_share, type='sale',
                 description=f"Vente annonce à {buyer.get_full_name() or buyer.username}: {ad.description[:40]}"
             )
+            admin_user = User.objects.filter(role='admin').first()
+            if admin_user and platform_share > 0:
+                admin_user.wallet_balance += platform_share
+                admin_user.save(update_fields=['wallet_balance'])
+                WalletTransaction.objects.create(
+                    user=admin_user, amount=platform_share, type='sale',
+                    description=f"Frais plateforme annonce: {ad.description[:40]}"
+                )
             serializer.save(buyer=buyer, amount=amount)
             Notification.objects.create(
                 user=influencer,
@@ -765,6 +777,7 @@ class AdPurchaseViewSet(viewsets.ModelViewSet):
                     'buyer_phone': buyer.phone or '',
                     'ad_id': ad.id,
                     'amount': str(amount),
+                    'influencer_share': str(influencer_share),
                 },
             )
 

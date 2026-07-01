@@ -585,25 +585,6 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: _copyStoreLink,
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: primaryBlue,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.share, color: Colors.white, size: 24),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 24),

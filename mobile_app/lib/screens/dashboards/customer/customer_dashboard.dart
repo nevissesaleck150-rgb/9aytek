@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_app/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
@@ -540,15 +541,33 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ListTile(
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: product.imageUrl != null
-                              ? CachedNetworkImage(
-                                  imageUrl: product.imageUrl!,
-                                  width: 56,
-                                  height: 56,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) => Container(
+                        leading: GestureDetector(
+                          onTap: product.imageUrl != null
+                              ? () => _showProductImage(
+                                  product.imageUrl!,
+                                  product.name,
+                                  description: product.description,
+                                )
+                              : null,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: product.imageUrl != null
+                                ? CachedNetworkImage(
+                                    imageUrl: product.imageUrl!,
+                                    width: 56,
+                                    height: 56,
+                                    fit: BoxFit.cover,
+                                    errorWidget: (_, __, ___) => Container(
+                                      width: 56,
+                                      height: 56,
+                                      color: accentBlue,
+                                      child: Icon(
+                                        Icons.shopping_bag_outlined,
+                                        color: primaryBlue,
+                                      ),
+                                    ),
+                                  )
+                                : Container(
                                     width: 56,
                                     height: 56,
                                     color: accentBlue,
@@ -557,16 +576,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                       color: primaryBlue,
                                     ),
                                   ),
-                                )
-                              : Container(
-                                  width: 56,
-                                  height: 56,
-                                  color: accentBlue,
-                                  child: Icon(
-                                    Icons.shopping_bag_outlined,
-                                    color: primaryBlue,
-                                  ),
-                                ),
+                          ),
                         ),
                         title: Text(
                           product.name,
@@ -733,70 +743,98 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     });
   }
 
-  void _showProductImage(String imageUrl, String productName) {
+  void _showProductImage(
+    String imageUrl,
+    String productName, {
+    String? description,
+  }) {
+    final cleanDescription = (description ?? '').trim();
     showDialog(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(8),
-        child: Stack(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: InteractiveViewer(
-                minScale: 1.0,
-                maxScale: 4.0,
-                child: Center(
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.contain,
-                    placeholder: (_, __) => const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                    errorWidget: (_, __, ___) => const Icon(
-                      Icons.broken_image,
-                      color: Colors.white,
-                      size: 64,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 12,
-              left: 12,
-              right: 12,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        productName,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+        child: SizedBox(
+          width: double.infinity,
+          height: MediaQuery.sizeOf(context).height * 0.9,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    Expanded(
+                      child: InteractiveViewer(
+                        minScale: 1.0,
+                        maxScale: 4.0,
+                        child: Center(
+                          child: CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.contain,
+                            placeholder: (_, __) => const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            ),
+                            errorWidget: (_, __, ___) => const Icon(
+                              Icons.broken_image,
+                              color: Colors.white,
+                              size: 64,
+                            ),
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+                      decoration: const BoxDecoration(
+                        color: Colors.black,
+                        border: Border(
+                          top: BorderSide(color: Color(0xFF1E293B), width: 1),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            productName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            cleanDescription.isEmpty
+                                ? 'Aucune description disponible'
+                                : cleanDescription,
+                            style: const TextStyle(
+                              color: Color(0xFFE2E8F0),
+                              fontSize: 13,
+                              height: 1.35,
+                            ),
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.black,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -806,10 +844,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1180,6 +1218,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                       ? () => _showProductImage(
                                           product.imageUrl!,
                                           product.name,
+                                          description: product.description,
                                         )
                                       : null,
                                   child: ClipRRect(
@@ -1976,27 +2015,39 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   Widget _buildInfluencerProductCard(ApiProduct product, int influencerId) {
     return ListTile(
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: product.imageUrl != null
-            ? CachedNetworkImage(
-                imageUrl: product.imageUrl!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => Container(
+      leading: GestureDetector(
+        onTap: product.imageUrl != null
+            ? () => _showProductImage(
+                product.imageUrl!,
+                product.name,
+                description: product.description,
+              )
+            : null,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: product.imageUrl != null
+              ? CachedNetworkImage(
+                  imageUrl: product.imageUrl!,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Container(
+                    width: 48,
+                    height: 48,
+                    color: accentBlue,
+                    child: Icon(
+                      Icons.shopping_bag_outlined,
+                      color: primaryBlue,
+                    ),
+                  ),
+                )
+              : Container(
                   width: 48,
                   height: 48,
                   color: accentBlue,
                   child: Icon(Icons.shopping_bag_outlined, color: primaryBlue),
                 ),
-              )
-            : Container(
-                width: 48,
-                height: 48,
-                color: accentBlue,
-                child: Icon(Icons.shopping_bag_outlined, color: primaryBlue),
-              ),
+        ),
       ),
       title: Text(product.name),
       subtitle: Text('${product.priceMru} UM'),
@@ -2029,7 +2080,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           adDescription: ad.description,
           adPriceMru: ad.priceMru,
           adImageUrl: ad.imageUrl,
-          adPhone: ad.influencerPhone,
+          adPhone: null,
           influencerId: ad.influencerId,
           adInfluencerName: ad.influencerName,
         ),
@@ -2096,15 +2147,33 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         itemBuilder: (context, idx) {
                           final product = storeProducts[idx];
                           return ListTile(
-                            leading: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: product.imageUrl != null
-                                  ? CachedNetworkImage(
-                                      imageUrl: product.imageUrl!,
-                                      width: 48,
-                                      height: 48,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (_, __, ___) => Container(
+                            leading: GestureDetector(
+                              onTap: product.imageUrl != null
+                                  ? () => _showProductImage(
+                                      product.imageUrl!,
+                                      product.name,
+                                      description: product.description,
+                                    )
+                                  : null,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: product.imageUrl != null
+                                    ? CachedNetworkImage(
+                                        imageUrl: product.imageUrl!,
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (_, __, ___) => Container(
+                                          width: 48,
+                                          height: 48,
+                                          color: accentBlue,
+                                          child: Icon(
+                                            Icons.shopping_bag_outlined,
+                                            color: primaryBlue,
+                                          ),
+                                        ),
+                                      )
+                                    : Container(
                                         width: 48,
                                         height: 48,
                                         color: accentBlue,
@@ -2113,16 +2182,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                           color: primaryBlue,
                                         ),
                                       ),
-                                    )
-                                  : Container(
-                                      width: 48,
-                                      height: 48,
-                                      color: accentBlue,
-                                      child: Icon(
-                                        Icons.shopping_bag_outlined,
-                                        color: primaryBlue,
-                                      ),
-                                    ),
+                              ),
                             ),
                             title: Text(product.name),
                             subtitle: Text('${product.priceMru} UM'),
@@ -2583,16 +2643,51 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.lightBlue,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: SelectableText(
-                link,
-                style: TextStyle(color: primaryBlue, fontSize: 14),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightBlue,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: SelectableText(
+                      link,
+                      style: TextStyle(color: primaryBlue, fontSize: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Tooltip(
+                  message: 'Copier le lien',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: link));
+                      showAppSnack(
+                        context,
+                        'Lien copiÃ©',
+                        type: MessageType.success,
+                      );
+                    },
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: primaryBlue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.copy_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             const Text(
@@ -2949,15 +3044,38 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                             },
                           ),
                           const SizedBox(width: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: itemImageUrl != null
-                                ? CachedNetworkImage(
-                                    imageUrl: itemImageUrl,
-                                    width: 48,
-                                    height: 48,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (_, __, ___) => Container(
+                          GestureDetector(
+                            onTap: itemImageUrl != null
+                                ? () => _showProductImage(
+                                    itemImageUrl,
+                                    item.title,
+                                    description: item.description,
+                                  )
+                                : null,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: itemImageUrl != null
+                                  ? CachedNetworkImage(
+                                      imageUrl: itemImageUrl,
+                                      width: 48,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (_, __, ___) => Container(
+                                        width: 48,
+                                        height: 48,
+                                        color: accentBlue,
+                                        child: Icon(
+                                          item.isTopup
+                                              ? Icons.phone_android
+                                              : item.isCourse
+                                              ? Icons.menu_book
+                                              : Icons.shopping_bag_outlined,
+                                          color: primaryBlue,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
                                       width: 48,
                                       height: 48,
                                       color: accentBlue,
@@ -2971,21 +3089,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                         size: 24,
                                       ),
                                     ),
-                                  )
-                                : Container(
-                                    width: 48,
-                                    height: 48,
-                                    color: accentBlue,
-                                    child: Icon(
-                                      item.isTopup
-                                          ? Icons.phone_android
-                                          : item.isCourse
-                                          ? Icons.menu_book
-                                          : Icons.shopping_bag_outlined,
-                                      color: primaryBlue,
-                                      size: 24,
-                                    ),
-                                  ),
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -3533,7 +3637,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             const SizedBox(height: 12),
 
             // Order contents.
-            ...order.items.map((item) => _buildOrderItemRow(item)),
+            ...order.items.map((item) => _buildOrderItemRow(order, item)),
 
             // Driver information button.
             if (hasDelivery && hasDriver) ...[
@@ -3584,10 +3688,17 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     );
   }
 
-  Widget _buildOrderItemRow(ApiOrderItem item) {
+  Widget _buildOrderItemRow(ApiOrder order, ApiOrderItem item) {
     final isTopup = item.itemType == 'topup';
     final isCourse = item.itemType == 'course';
     final isAd = item.itemType == 'ad';
+    final isPaid = const {
+      'paid',
+      'ready',
+      'on_way',
+      'arrived',
+      'delivered',
+    }.contains(order.status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -3613,7 +3724,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (isAd && (item.influencerPhone ?? '').isNotEmpty) ...[
+                if (isAd &&
+                    isPaid &&
+                    (item.influencerPhone ?? '').isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     'Influenceur: ${item.influencerPhone}',
@@ -3661,36 +3774,49 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
             title: const Text('Évaluer le coursier'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Veuillez attribuer une note au coursier pour valider la livraison:',
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) {
-                    final starIdx = index + 1;
-                    return IconButton(
-                      icon: Icon(
-                        starIdx <= selectedRating
-                            ? Icons.star
-                            : Icons.star_border,
-                        color: AppColors.primaryBlue,
-                        size: 36,
-                      ),
-                      onPressed: () {
-                        setDialogState(() {
-                          selectedRating = starIdx;
-                        });
-                      },
-                    );
-                  }),
+                SizedBox(
+                  width: double.infinity,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(5, (index) {
+                      final starIdx = index + 1;
+                      final isSelected = starIdx <= selectedRating;
+                      return IconButton(
+                        constraints: const BoxConstraints.tightFor(
+                          width: 40,
+                          height: 40,
+                        ),
+                        padding: EdgeInsets.zero,
+                        icon: Icon(
+                          isSelected ? Icons.star : Icons.star_border,
+                          color: isSelected
+                              ? const Color(0xFFFFC107)
+                              : const Color(0xFFCBD5E1),
+                          size: 34,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            selectedRating = starIdx;
+                          });
+                        },
+                      );
+                    }),
+                  ),
                 ),
               ],
             ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -3806,7 +3932,7 @@ class CartItem {
       adDescription: json['ad_description'] as String? ?? product?.description,
       adPriceMru: _nullableInt(json['ad_price_mru']) ?? product?.priceMru,
       adImageUrl: json['ad_image_url'] as String? ?? product?.imageUrl,
-      adPhone: json['ad_phone'] as String?,
+      adPhone: null,
       adInfluencerName: json['ad_influencer_name'] as String?,
       topupAccountId: json['topup_account_id'] as String?,
       topupPayer: json['topup_payer'] as String?,
@@ -3872,7 +3998,7 @@ class CartItem {
       'ad_description': adDescription,
       'ad_price_mru': adPriceMru,
       'ad_image_url': adImageUrl,
-      'ad_phone': adPhone,
+      'ad_phone': null,
       'ad_influencer_name': adInfluencerName,
       'topup_account_id': topupAccountId,
       'topup_payer': topupPayer,

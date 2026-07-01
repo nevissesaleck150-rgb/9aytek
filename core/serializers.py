@@ -274,8 +274,28 @@ class OrderItemSerializer(serializers.ModelSerializer):
         return influencer.username if influencer else None
 
     def get_influencer_phone(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if (
+            user
+            and user.is_authenticated
+            and getattr(user, 'role', '') == 'customer'
+            and obj.order.status not in ('paid', 'ready', 'on_way', 'arrived', 'delivered')
+        ):
+            return None
         influencer = obj.influencer or (obj.influencer_ad.influencer if obj.influencer_ad else None)
         return influencer.phone if influencer else None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated and getattr(user, 'role', '') == 'customer':
+            data.pop('vendor_share', None)
+            data.pop('influencer_share', None)
+            data.pop('platform_share', None)
+            data.pop('driver_share', None)
+        return data
 
 # 5. Order serializer.
 class OrderSerializer(serializers.ModelSerializer):
@@ -425,7 +445,7 @@ class AdPurchaseSerializer(serializers.ModelSerializer):
 class InfluencerAdSerializer(serializers.ModelSerializer):
     influencer_id = serializers.ReadOnlyField(source='influencer.id')
     influencer_name = serializers.ReadOnlyField(source='influencer.username')
-    influencer_phone = serializers.ReadOnlyField(source='influencer.phone')
+    influencer_phone = serializers.SerializerMethodField()
     price_mru = serializers.IntegerField(source='price', read_only=True)
     image_url = serializers.SerializerMethodField()
 
@@ -462,3 +482,21 @@ class InfluencerAdSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return ''
+
+    def get_influencer_phone(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return ''
+        if getattr(user, 'role', '') != 'customer':
+            return obj.influencer.phone
+        has_paid_direct_purchase = AdPurchase.objects.filter(
+            buyer=user,
+            ad=obj,
+        ).exists()
+        has_paid_order = OrderItem.objects.filter(
+            order__customer=user,
+            influencer_ad=obj,
+            order__status__in=('paid', 'ready', 'on_way', 'arrived', 'delivered'),
+        ).exists()
+        return obj.influencer.phone if has_paid_direct_purchase or has_paid_order else ''
