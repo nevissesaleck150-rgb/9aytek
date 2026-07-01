@@ -357,9 +357,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = self.get_object()
         if order.driver and order.driver != request.user:
             return Response({'error': 'Commande déjà assignée à un autre chauffeur'}, status=status.HTTP_409_CONFLICT)
+        if order.status != 'ready':
+            return Response({'error': 'La commande doit être prête avant acceptation.'}, status=status.HTTP_400_BAD_REQUEST)
         order.driver = request.user
-        if order.status == 'paid':
-            order.status = 'ready'
         # Populate vendor/customer locations from User profiles
         if order.customer and order.customer.latitude and order.customer.longitude:
             order.customer_latitude = order.customer.latitude
@@ -443,9 +443,9 @@ class OrderViewSet(viewsets.ModelViewSet):
             for item in physical_items:
                 vid = item.product.vendor_id
                 if vid not in vendor_status:
-                    vendor_status[vid] = False
-                if item.vendor_ready:
                     vendor_status[vid] = True
+                if not item.vendor_ready:
+                    vendor_status[vid] = False
 
             all_ready = all(vendor_status.values()) if vendor_status else True
             if all_ready and order.status == 'paid':

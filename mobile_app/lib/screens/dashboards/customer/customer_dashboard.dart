@@ -3413,49 +3413,59 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   }
 
   Widget _buildOrderCard(ApiOrder order, bool isDelivered) {
-    final isTopupOrder = order.items.any((item) => item.itemType == 'topup');
-    final isCourseOrder = order.items.any((item) => item.itemType == 'course');
-    final hasDelivery = !isTopupOrder && !isCourseOrder;
+    final hasTopup = order.items.any((item) => item.itemType == 'topup');
+    final hasCourse = order.items.any((item) => item.itemType == 'course');
+    final hasAd = order.items.any((item) => item.itemType == 'ad');
+    final hasProduct = order.items.any((item) => item.itemType == 'product');
+    final isTopupOnly = hasTopup && !hasProduct && !hasCourse && !hasAd;
+    final isCourseOnly = hasCourse && !hasProduct && !hasTopup && !hasAd;
+    final isAdOnly = hasAd && !hasProduct && !hasTopup && !hasCourse;
+    final hasDelivery = hasProduct;
     final hasDriver = order.driverId != null || order.driverInfo != null;
 
     // ── Status label + color ──
     String statusText;
     Color statusColor;
 
-    if (isTopupOrder) {
+    if (isTopupOnly) {
       statusText = order.status == 'delivered'
-          ? 'Recharge effectuee'
-          : 'En attente';
+          ? 'Recharge effectuée'
+          : 'En attente du traitement admin';
       statusColor = order.status == 'delivered'
           ? AppColors.primaryBlue
           : AppColors.primaryBlue;
-    } else if (isCourseOrder) {
+    } else if (isCourseOnly) {
       statusText = (order.status == 'paid' || order.status == 'delivered')
-          ? 'Acheté'
+          ? 'Acheté - disponible dans Mes Cours'
           : 'En attente';
       statusColor = (order.status == 'paid' || order.status == 'delivered')
           ? AppColors.primaryBlue
           : AppColors.primaryBlue;
+    } else if (isAdOnly) {
+      statusText = (order.status == 'paid' || order.status == 'delivered')
+          ? 'Annonce payée'
+          : 'En attente';
+      statusColor = AppColors.primaryBlue;
     } else {
       switch (order.status) {
         case 'paid':
           statusText = order.vendorsTotal > 1
-              ? 'Préparation (${order.vendorsReady}/${order.vendorsTotal})'
-              : 'Payée';
+              ? 'En attente des vendeurs (${order.vendorsReady}/${order.vendorsTotal})'
+              : 'En attente du vendeur';
           statusColor = order.allVendorsReady
               ? AppColors.primaryBlue
               : AppColors.primaryBlue;
           break;
         case 'ready':
-          statusText = 'Prête';
+          statusText = hasDriver ? 'Acceptée par le livreur' : 'Prête';
           statusColor = AppColors.primaryBlue;
           break;
         case 'on_way':
-          statusText = 'En route';
+          statusText = 'Avec le livreur';
           statusColor = AppColors.primaryBlue;
           break;
         case 'arrived':
-          statusText = 'Le livreur est arrive';
+          statusText = 'Le livreur est arrivé';
           statusColor = AppColors.primaryBlue;
           break;
         case 'delivered':

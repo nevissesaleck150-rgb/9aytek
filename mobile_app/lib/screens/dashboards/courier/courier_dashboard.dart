@@ -64,7 +64,7 @@ class _CourierDashboardState extends State<CourierDashboard> {
         final all = ordersRes.data ?? [];
         _myDeliveries = all.where((o) => o.driverId == widget.user.id).toList();
         _availableOrders = all
-            .where((o) => o.driverId == null && (o.status == 'paid' || o.status == 'ready'))
+            .where((o) => o.driverId == null && o.status == 'ready')
             .toList();
       }
       if (notifRes.isSuccess) _notifications = notifRes.data ?? [];
@@ -113,7 +113,11 @@ class _CourierDashboardState extends State<CourierDashboard> {
                     Expanded(
                       child: const Text(
                         'Notifications',
-                        style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -133,7 +137,10 @@ class _CourierDashboardState extends State<CourierDashboard> {
                     ? const Center(
                         child: Text(
                           'Aucune nouvelle notification',
-                          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       )
                     : ListView.separated(
@@ -141,7 +148,8 @@ class _CourierDashboardState extends State<CourierDashboard> {
                         padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemCount: notifications.length,
-                        itemBuilder: (_, i) => _buildNotifTile(notifications[i], ctx),
+                        itemBuilder: (_, i) =>
+                            _buildNotifTile(notifications[i], ctx),
                       ),
               ),
             ],
@@ -196,9 +204,21 @@ class _CourierDashboardState extends State<CourierDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(n.title, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
+                  Text(
+                    n.title,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(n.body, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500)),
+                  Text(
+                    n.body,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -269,7 +289,10 @@ class _CourierDashboardState extends State<CourierDashboard> {
             Stack(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_none_outlined, color: Colors.black),
+                  icon: const Icon(
+                    Icons.notifications_none_outlined,
+                    color: Colors.black,
+                  ),
                   onPressed: _openNotificationsSheet,
                 ),
                 if (_unreadCount > 0)
@@ -279,11 +302,21 @@ class _CourierDashboardState extends State<CourierDashboard> {
                     child: IgnorePointer(
                       child: Container(
                         padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
                         child: Text(
                           _unreadCount > 99 ? '99+' : '$_unreadCount',
-                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -374,7 +407,9 @@ class _CourierDashboardState extends State<CourierDashboard> {
                       context: context,
                       builder: (ctx) => AlertDialog(
                         backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                         title: const Text(
                           'Confirmation',
                           style: TextStyle(fontWeight: FontWeight.w800),
@@ -393,7 +428,9 @@ class _CourierDashboardState extends State<CourierDashboard> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primaryBlue,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             onPressed: () => Navigator.pop(ctx, true),
                             child: const Text('Confirmer'),
@@ -405,7 +442,9 @@ class _CourierDashboardState extends State<CourierDashboard> {
                       setState(() => _isOnline = v);
                       showAppSnack(
                         context,
-                        v ? 'Vous êtes maintenant en ligne' : 'Vous êtes hors ligne',
+                        v
+                            ? 'Vous êtes maintenant en ligne'
+                            : 'Vous êtes hors ligne',
                       );
                     }
                   },
@@ -921,6 +960,7 @@ class _CourierDashboardState extends State<CourierDashboard> {
         .toList();
     final totalDelivered = deliveredOrders.length;
     final rating = 4.8; // Simulator value
+    final totalDistanceKm = totalDelivered * 3.4;
 
     return RefreshIndicator(
       onRefresh: _refreshData,
@@ -954,7 +994,7 @@ class _CourierDashboardState extends State<CourierDashboard> {
               ),
               _buildStatCard(
                 'Distance',
-                '${totalDelivered * 3.4} km',
+                '${totalDistanceKm.toStringAsFixed(1)} km',
                 Icons.directions_bike_outlined,
               ),
               _buildStatCard('Évaluation', '$rating / 5', Icons.star_outline),
@@ -986,8 +1026,10 @@ class _CourierDashboardState extends State<CourierDashboard> {
           const Spacer(),
           Text(
             value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 17,
+              fontSize: value.length > 12 ? 15 : 17,
               fontWeight: FontWeight.bold,
               color: primaryBlue,
             ),

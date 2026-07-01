@@ -1033,17 +1033,30 @@ class _VendorDashboardState extends State<VendorDashboard> {
 
   // --- Orders Tab ---
   Widget _buildOrdersTab() {
-    final paidOrders = _vendorOrders.where((o) => o.status == 'paid').toList();
+    bool hasMyItems(ApiOrder order) =>
+        order.items.any((item) => item.vendorId == widget.user.id);
+    bool myItemsReady(ApiOrder order) {
+      final items = order.items
+          .where((item) => item.vendorId == widget.user.id)
+          .toList();
+      return items.isNotEmpty && items.every((item) => item.vendorReady);
+    }
+
+    final paidOrders = _vendorOrders
+        .where((o) => o.status == 'paid' && hasMyItems(o) && !myItemsReady(o))
+        .toList();
     final preparedOrders = _vendorOrders
         .where(
           (o) =>
-              o.status == 'ready' ||
-              o.status == 'on_way' ||
-              o.status == 'arrived',
+              hasMyItems(o) &&
+              ((o.status == 'paid' && myItemsReady(o)) ||
+                  o.status == 'ready' ||
+                  o.status == 'on_way' ||
+                  o.status == 'arrived'),
         )
         .toList();
     final deliveredOrders = _vendorOrders
-        .where((o) => o.status == 'delivered')
+        .where((o) => o.status == 'delivered' && hasMyItems(o))
         .toList();
 
     return RefreshIndicator(

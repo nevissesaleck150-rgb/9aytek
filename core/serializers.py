@@ -309,9 +309,9 @@ class OrderSerializer(serializers.ModelSerializer):
         for item in physical_items:
             vid = item.product.vendor_id
             if vid not in vendors:
-                vendors[vid] = False
-            if item.vendor_ready:
                 vendors[vid] = True
+            if not item.vendor_ready:
+                vendors[vid] = False
         total = len(vendors)
         ready = sum(1 for v in vendors.values() if v)
         return {'ready': ready, 'total': total, 'all_ready': ready == total}
