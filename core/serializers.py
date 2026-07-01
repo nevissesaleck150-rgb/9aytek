@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Product, DigitalService, Order, OrderItem, Shop, MarketingRequest, InfluencerAd
+from .models import User, Product, DigitalService, Order, OrderItem, Shop, MarketingRequest, InfluencerAd, Notification, AdPurchase
 from django.contrib.auth.hashers import make_password
 
 # 1. Registration serializer for the mobile app.
@@ -48,6 +48,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 # 2. User serializer.
 class UserSerializer(serializers.ModelSerializer):
+    store_name = serializers.SerializerMethodField()
+    store_description = serializers.SerializerMethodField()
+    store_type = serializers.SerializerMethodField()
+    store_logo = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -69,12 +74,47 @@ class UserSerializer(serializers.ModelSerializer):
             'bank_account',
             'national_id',
             'driving_license',
+            'store_name',
+            'store_description',
+            'store_type',
+            'store_logo',
             'resume',
             'social_links',
             'specialty',
             'is_approved',
         ]
         read_only_fields = ['id', 'role', 'wallet_balance', 'is_approved']
+
+    def get_store_name(self, obj):
+        return getattr(getattr(obj, 'shop', None), 'name', None)
+
+    def get_store_description(self, obj):
+        return getattr(getattr(obj, 'shop', None), 'description', None)
+
+    def get_store_type(self, obj):
+        return getattr(getattr(obj, 'shop', None), 'category', None)
+
+    def get_store_logo(self, obj):
+        shop = getattr(obj, 'shop', None)
+        return shop.image.name if shop and shop.image else None
+
+    def update(self, instance, validated_data):
+        user = super().update(instance, validated_data)
+        raw_data = getattr(self, 'initial_data', {}) or {}
+        if user.role == 'vendor':
+            shop_fields = {}
+            if 'store_name' in raw_data:
+                shop_fields['name'] = (raw_data.get('store_name') or '').strip()
+            if 'store_description' in raw_data:
+                shop_fields['description'] = (raw_data.get('store_description') or '').strip()
+            if 'store_type' in raw_data:
+                shop_fields['category'] = (raw_data.get('store_type') or '').strip()
+            if raw_data.get('store_logo'):
+                shop_fields['image'] = raw_data.get('store_logo')
+            if shop_fields:
+                shop_fields.setdefault('name', getattr(getattr(user, 'shop', None), 'name', '') or user.username)
+                Shop.objects.update_or_create(vendor=user, defaults=shop_fields)
+        return user
 
 
 class DriverInfoSerializer(serializers.ModelSerializer):
@@ -336,6 +376,23 @@ class MarketingRequestSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.product.image.url)
             return obj.product.image.url
         return None
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'type', 'title', 'body', 'data', 'is_read', 'created_at']
+        read_only_fields = ['id', 'type', 'title', 'body', 'data', 'created_at']
+
+
+class AdPurchaseSerializer(serializers.ModelSerializer):
+    buyer_name = serializers.ReadOnlyField(source='buyer.get_full_name')
+    buyer_phone = serializers.ReadOnlyField(source='buyer.phone')
+
+    class Meta:
+        model = AdPurchase
+        fields = ['id', 'ad', 'buyer_name', 'buyer_phone', 'amount', 'created_at']
+        read_only_fields = ['id', 'buyer_name', 'buyer_phone', 'amount', 'created_at']
 
 
 class InfluencerAdSerializer(serializers.ModelSerializer):

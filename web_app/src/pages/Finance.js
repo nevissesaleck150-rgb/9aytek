@@ -163,7 +163,7 @@ const Finance = () => {
                                                 </svg>
                                             </div>
                                             <span style={{ fontWeight: '600', color: '#0F172A' }}>
-                                                {item.product_name || item.service_name}
+                                                {item.item_name || '—'}
                                             </span>
                                         </div>
                                     </td>

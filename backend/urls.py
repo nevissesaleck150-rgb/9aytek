@@ -4,14 +4,16 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from core.views import (
-    UserViewSet, 
-    FinanceViewSet, 
-    DigitalServiceViewSet, 
+    UserViewSet,
+    FinanceViewSet,
+    DigitalServiceViewSet,
     OrderViewSet,
     ProductViewSet,
     ShopViewSet,
     MarketingRequestViewSet,
     InfluencerAdViewSet,
+    NotificationViewSet,
+    AdPurchaseViewSet,
     register_user,
     custom_login,
 )
@@ -25,6 +27,8 @@ router.register(r'products', ProductViewSet)
 router.register(r'shops', ShopViewSet)
 router.register(r'marketing-requests', MarketingRequestViewSet, basename='marketing-request')
 router.register(r'influencer-ads', InfluencerAdViewSet, basename='influencer-ad')
+router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r'ad-purchases', AdPurchaseViewSet, basename='ad-purchase')
 
 urlpatterns = [
     path('admin/', admin.site.urls), 

@@ -1,4 +1,5 @@
 from decimal import Decimal
+import re
 from django.db import transaction
 from django.db.models import Sum, Q, F, DecimalField
 from django.utils import timezone
@@ -7,7 +8,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, OrderItem, Order, Product, DigitalService, Shop, distribute_order_shares, MarketingRequest, InfluencerAd
+from .models import User, OrderItem, Order, Product, DigitalService, Shop, distribute_order_shares, MarketingRequest, InfluencerAd, Notification, AdPurchase, WalletTransaction
 from .serializers import (
     UserSerializer,
     UserRegistrationSerializer,
@@ -20,6 +21,8 @@ from .serializers import (
     CreateOrderSerializer,
     MarketingRequestSerializer,
     InfluencerAdSerializer,
+    NotificationSerializer,
+    AdPurchaseSerializer,
 )
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -88,7 +91,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Impossible de refuser ce compte.'}, status=status.HTTP_400_BAD_REQUEST)
         user.is_approved = False
         user.save()
-        return Response({'status': f'Utilisateur {username} rejeté.'})
+        return Response({'status': f'Utilisateur {user.username} rejeté.'})
 
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
@@ -296,7 +299,22 @@ class OrderViewSet(viewsets.ModelViewSet):
         )
         if is_digital and not is_topup:
             distribute_order_shares(order)
-            
+        else:
+            # Physical order paid — notify all active drivers
+            drivers = User.objects.filter(role='driver', is_approved=True)
+            notifs = [
+                Notification(
+                    user=driver,
+                    type='new_order',
+                    title='Nouvelle livraison disponible !',
+                    body=f'Commande #{order.id} · {order.total_amount} MRU — soyez le premier à accepter',
+                    data={'order_id': order.id, 'amount': str(order.total_amount)},
+                )
+                for driver in drivers
+            ]
+            if notifs:
+                Notification.objects.bulk_create(notifs)
+
         return Response(OrderSerializer(order).data)
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
@@ -360,10 +378,20 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order.driver_rating = int(rating)
             except ValueError:
                 pass
-                
+
         order.status = 'delivered'
         order.save(update_fields=['status', 'driver_rating'])
         distribute_order_shares(order)
+
+        if order.driver and order.driver_rating is not None:
+            stars = '⭐' * order.driver_rating
+            Notification.objects.create(
+                user=order.driver,
+                type='driver_rating',
+                title='Nouveau avis client !',
+                body=f'Le client {order.customer.get_full_name() or order.customer.username} vous a donné {order.driver_rating}/5 {stars}',
+                data={'rating': order.driver_rating, 'order_id': order.id},
+            )
         return Response(OrderSerializer(order).data)
 
     @action(detail=True, methods=['post', 'patch'])
@@ -575,6 +603,13 @@ class MarketingRequestViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Non autorisé'}, status=status.HTTP_403_FORBIDDEN)
         mr.status = 'accepted'
         mr.save()
+        Notification.objects.create(
+            user=mr.influencer,
+            type='marketing_accepted',
+            title='Demande acceptée !',
+            body=f'{request.user.get_full_name() or request.user.username} a accepté votre demande pour « {mr.product.name} »',
+            data={'product_name': mr.product.name, 'vendor_name': request.user.username, 'request_id': mr.id},
+        )
         return Response(MarketingRequestSerializer(mr).data)
 
     @action(detail=True, methods=['post'])
@@ -621,9 +656,8 @@ class InfluencerAdViewSet(viewsets.ModelViewSet):
         influencer_id = self.request.query_params.get('influencer_id')
         if influencer_id:
             all_qs = InfluencerAd.objects.filter(influencer_id=influencer_id)
-            qs = all_qs.filter(is_active=True)
-            print(f"[InfluencerAd] customer={user.username} influencer_id={influencer_id} total={all_qs.count()} active={qs.count()}")
-            return qs.order_by('-created_at')
+            print(f"[InfluencerAd] customer={user.username} influencer_id={influencer_id} total={all_qs.count()}")
+            return all_qs.order_by('-created_at')
         if user.is_staff or user.role == 'admin':
             return InfluencerAd.objects.all().order_by('-created_at')
         if user.role == 'influencer':
@@ -636,7 +670,7 @@ class InfluencerAdViewSet(viewsets.ModelViewSet):
         if self.request.user.role != 'influencer':
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Seuls les influenceurs peuvent créer des annonces')
-        serializer.save(influencer=self.request.user)
+        serializer.save(influencer=self.request.user, is_active=True)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -646,12 +680,96 @@ class InfluencerAdViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        notif = self.get_object()
+        notif.is_read = True
+        notif.save(update_fields=['is_read'])
+        return Response({'success': True})
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return Response({'success': True})
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
+        return Response({'count': count})
+
+
+class AdPurchaseViewSet(viewsets.ModelViewSet):
+    serializer_class = AdPurchaseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        return AdPurchase.objects.filter(buyer=self.request.user)
+
+    def perform_create(self, serializer):
+        buyer = self.request.user
+        ad = serializer.validated_data['ad']
+        amount = Decimal(str(ad.price))
+        if buyer.wallet_balance < amount:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError('Solde insuffisant pour acheter cette annonce.')
+        with transaction.atomic():
+            buyer.wallet_balance -= amount
+            buyer.save(update_fields=['wallet_balance'])
+            influencer = ad.influencer
+            influencer.wallet_balance += amount
+            influencer.save(update_fields=['wallet_balance'])
+            WalletTransaction.objects.create(
+                user=buyer, amount=-amount, type='withdrawal',
+                description=f"Achat annonce: {ad.description[:50]}"
+            )
+            WalletTransaction.objects.create(
+                user=influencer, amount=amount, type='sale',
+                description=f"Vente annonce à {buyer.get_full_name() or buyer.username}: {ad.description[:40]}"
+            )
+            serializer.save(buyer=buyer, amount=amount)
+            Notification.objects.create(
+                user=influencer,
+                type='ad_purchase',
+                title='Annonce achetée !',
+                body=f'{buyer.get_full_name() or buyer.username} a acheté votre annonce ({amount} MRU)',
+                data={
+                    'buyer_name': buyer.get_full_name() or buyer.username,
+                    'buyer_phone': buyer.phone or '',
+                    'ad_id': ad.id,
+                    'amount': str(amount),
+                },
+            )
+
+
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def register_user(request):
     raw_data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
     email = (raw_data.get('email') or '').strip()
+    username_source = (
+        raw_data.get('username')
+        or raw_data.get('full_name')
+        or raw_data.get('first_name')
+        or email
+    ).strip()
+    username_base = re.sub(r'[^\w.@+-]+', '_', username_source).strip('._-+@')
+    if not username_base:
+        username_base = (email.split('@')[0] if email else 'user') or 'user'
+    username = username_base
+    suffix = 1
+    while User.objects.filter(username=username).exists():
+        suffix += 1
+        username = f'{username_base}_{suffix}'
     data = {
+        'username': username,
         'email': email,
         'password': raw_data.get('password', ''),
         'role': raw_data.get('role', 'customer'),
@@ -677,8 +795,6 @@ def register_user(request):
         data['national_id'] = raw_data.get('national_id')
     if raw_data.get('driving_license'):
         data['driving_license'] = raw_data.get('driving_license')
-    if email:
-        data['username'] = email
 
     serializer = UserRegistrationSerializer(data=data)
     if serializer.is_valid():

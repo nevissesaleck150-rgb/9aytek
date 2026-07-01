@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none">
+  <rect width="24" height="24" rx="4" fill="#F8FAFF"/>
+  <path d="M3 12l9-9 9 9-9 9L3 12z" fill="#5B9DF9" opacity="0.9"/>
+  <text x="12" y="14" font-size="3" text-anchor="middle" fill="#fff" font-family="Arial">Flutter</text>
+</svg>

@@ -255,8 +255,59 @@ class InfluencerAd(models.Model):
         return f"Annonce de {self.influencer.username} - {self.price} MRU"
 
 
+# 9. شراء إعلانات المؤثرين من طرف التجار
+class AdPurchase(models.Model):
+    ad = models.ForeignKey(InfluencerAd, on_delete=models.CASCADE, related_name='purchases')
+    buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ad_purchases')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.buyer.username} → {self.ad.description[:40]}"
+
+
+# 10. الإشعارات
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('marketing_accepted', 'Demande marketing acceptée'),
+        ('wallet_credit', 'Argent reçu'),
+        ('ad_purchase', 'Annonce achetée'),
+        ('new_order', 'Nouvelle commande'),
+        ('driver_rating', 'Avis client'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=30, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    data = models.JSONField(default=dict, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} – {self.title}"
+
+
 # Auto-create Shop for new vendors
 @receiver(post_save, sender=User)
 def create_vendor_shop(sender, instance, created, **kwargs):
     if created and instance.role == 'vendor':
         Shop.objects.get_or_create(vendor=instance, defaults={'name': instance.username, 'is_active': True})
+
+
+# Notify influencer or driver when wallet is credited
+@receiver(post_save, sender=WalletTransaction)
+def notify_wallet_credit(sender, instance, created, **kwargs):
+    if created and instance.amount > 0 and instance.user.role in ('influencer', 'driver'):
+        Notification.objects.create(
+            user=instance.user,
+            type='wallet_credit',
+            title='Argent reçu !',
+            body=f'+{instance.amount} MRU · {instance.description}',
+            data={'amount': str(instance.amount)},
+        )

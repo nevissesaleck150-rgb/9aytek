@@ -59,10 +59,11 @@ const Orders = () => {
     const completedOrders = orders.filter(o => o.status === 'delivered').length;
 
     const statusConfig = {
-        paid:      { bg: '#ECFDF5', color: '#10B981', label: 'PAYÉ' },
         pending:   { bg: '#FFF7ED', color: '#F97316', label: 'EN ATTENTE' },
+        paid:      { bg: '#ECFDF5', color: '#10B981', label: 'PAYÉ' },
         ready:     { bg: '#EFF6FF', color: primaryBlue, label: 'PRÊT' },
-        shipped:   { bg: '#F5F3FF', color: '#8B5CF6', label: 'EN LIVRAISON' },
+        on_way:    { bg: '#F5F3FF', color: '#8B5CF6', label: 'EN LIVRAISON' },
+        arrived:   { bg: '#FEF3C7', color: '#D97706', label: 'ARRIVÉ' },
         delivered: { bg: '#ECFDF5', color: '#10B981', label: 'LIVRÉ' },
     };
 
@@ -213,7 +214,8 @@ const Orders = () => {
                                                     <option value="pending">En attente</option>
                                                     <option value="paid">Payé (Validé)</option>
                                                     <option value="ready">Prêt (Stock)</option>
-                                                    <option value="shipped">En Livraison</option>
+                                                    <option value="on_way">En Livraison</option>
+                                                    <option value="arrived">Arrivé chez le client</option>
                                                     <option value="delivered">Livré</option>
                                                 </select>
                                             </div>

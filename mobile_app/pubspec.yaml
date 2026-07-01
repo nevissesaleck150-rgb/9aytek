@@ -1,0 +1,56 @@
+name: mobile_app
+description: "منصة التجارة المتكاملة - Multi-Vendor Ecosystem"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # الأيقونات الأساسية
+  cupertino_icons: ^1.0.8
+
+  # --- مكتبات الربط مع الباكند (Django) ---
+  http: ^1.1.0                 # لإرسال واستقبال البيانات
+  flutter_secure_storage: ^9.0.0 # لتخزين التوكن (JWT) بأمان
+  provider: ^6.1.1             # لإدارة حالة المستخدم (تاجر/زبون/موصل)
+
+  # --- مكتبات الوسائط والمنتجات ---
+  image_picker: ^1.0.7         # لرفع صور المنتجات وإيصالات الدفع
+  flutter_map: ^5.0.0
+  latlong2: ^0.9.0
+  intl: 0.20.2                # لتنسيق العملات (MRU) والوقت (تم تعديل النسخة للتوافق)
+  cached_network_image: ^3.3.1 # لتحميل صور المنتجات من السيرفر بسرعة وسلاسة
+
+  # --- نظام الخرائط وتتبع الموصل (Courier System) ---
+  geolocator: ^11.0.0          # تحديد موقع الموصل اللحظي
+  flutter_polyline_points: ^2.0.0 # رسم خط السير من التاجر إلى الزبون
+
+  # --- الإشعارات ونظام Firebase ---
+  firebase_core: ^2.27.0       # أساس تشغيل خدمات جوجل
+  firebase_messaging: ^14.7.19 # لإرسال تنبيهات الطلبات الجديدة لحظياً
+
+  # --- تحسين الواجهة (UI) ---
+  flutter_svg: ^2.0.10+1       # لدعم الشعارات والرسوم بصيغة SVG الفخمة
+  google_fonts: ^6.2.1         # لاستخدام خطوط عربية احترافية
+
+  # --- دعم اللغة العربية ---
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  # تأكدي من إنشاء المجلدات في مشروعك
+  assets:
+    - assets/images/
+    - assets/icons/

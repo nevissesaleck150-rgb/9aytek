@@ -84,10 +84,11 @@ const Delivery = () => {
     const pendingDeliveries = deliveries.filter(d => d.status === 'pending' || d.status === 'paid').length;
 
     const statusConfig = {
-        pending: { bg: '#FFF7ED', color: '#F97316', label: 'En attente' },
-        paid: { bg: '#ECFDF5', color: '#10B981', label: 'Paye' },
-        ready: { bg: '#EFF6FF', color: primaryBlue, label: 'Pret a recuperer' },
-        on_way: { bg: '#F5F3FF', color: '#8B5CF6', label: 'En livraison' },
+        pending:   { bg: '#FFF7ED', color: '#F97316', label: 'En attente' },
+        paid:      { bg: '#ECFDF5', color: '#10B981', label: 'Paye' },
+        ready:     { bg: '#EFF6FF', color: primaryBlue, label: 'Pret a recuperer' },
+        on_way:    { bg: '#F5F3FF', color: '#8B5CF6', label: 'En livraison' },
+        arrived:   { bg: '#FEF3C7', color: '#D97706', label: 'Arrive chez client' },
         delivered: { bg: '#ECFDF5', color: '#10B981', label: 'Livre' },
     };
 
@@ -168,6 +169,7 @@ const Delivery = () => {
                                     <option value="">Choisir le nouveau statut</option>
                                     <option value="ready">Pret a recuperer</option>
                                     <option value="on_way">En livraison</option>
+                                    <option value="arrived">Arrive chez client</option>
                                     <option value="delivered">Livre</option>
                                 </select>
                             </div>
@@ -197,7 +199,7 @@ const Delivery = () => {
                 )}
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '30px', flexWrap: 'wrap' }}>
-                    {['all', 'pending', 'paid', 'ready', 'on_way', 'delivered'].map(f => (
+                    {['all', 'pending', 'paid', 'ready', 'on_way', 'arrived', 'delivered'].map(f => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
