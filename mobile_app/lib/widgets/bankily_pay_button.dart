@@ -57,7 +57,7 @@ class BankilyPayButton extends StatelessWidget {
                     child: Text(
                       'Bankily',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
@@ -80,7 +80,7 @@ class BankilyPayButton extends StatelessWidget {
                       child: Text(
                         formatMru(amountMru),
                         style: const TextStyle(
-                          color: Colors.black,
+                          color: Colors.white,
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
                         ),

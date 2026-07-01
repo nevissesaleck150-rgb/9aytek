@@ -131,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         : const Text(
                             'Se connecter',
                             style: TextStyle(
-                              color: Colors.black,
+                              color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -313,19 +313,15 @@ class _LoginScreenState extends State<LoginScreen> {
         message.contains('Erreur') ||
         message.contains('incorrect') ||
         message.contains('impossible');
-    final messageColor = isErrorMsg
-        ? AppColors.primaryBlue
-        : AppColors.primaryBlue;
+    final messageColor = isErrorMsg ? Colors.red : AppColors.primaryBlue;
+    final textColor = isErrorMsg ? Colors.black : Colors.white;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: messageColor,

@@ -221,6 +221,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             for row in items_data:
                 product_id = row.get('product')
                 digital_service_id = row.get('digital_service')
+                influencer_ad_id = row.get('influencer_ad')
                 qty = row['quantity']
                 influencer_id = row.get('influencer')
                 topup_account_id = (row.get('topup_account_id') or '').strip()
@@ -229,6 +230,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 
                 prod = None
                 ds = None
+                ad = None
                 price = Decimal('0.00')
                 
                 if product_id:
@@ -251,16 +253,25 @@ class OrderViewSet(viewsets.ModelViewSet):
                             )
                         if not topup_payer:
                             topup_payer = request.user.get_full_name() or request.user.username
+                elif influencer_ad_id:
+                    ad = InfluencerAd.objects.select_related('influencer').get(pk=influencer_ad_id)
+                    price = Decimal(str(ad.price))
+                    influencer_id = ad.influencer_id
+                else:
+                    return Response(
+                        {'error': 'Chaque article doit contenir un produit, un service ou une annonce.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
                     
                 total += price * qty
-                order_items.append((prod, ds, qty, influencer_id, topup_account_id, topup_payer, topup_recharge_type))
+                order_items.append((prod, ds, ad, qty, influencer_id, topup_account_id, topup_payer, topup_recharge_type))
 
             order = Order.objects.create(
                 customer=request.user,
                 total_amount=total,
                 status='pending',
             )
-            for prod, ds, qty, influencer_id, topup_account_id, topup_payer, topup_recharge_type in order_items:
+            for prod, ds, ad, qty, influencer_id, topup_account_id, topup_payer, topup_recharge_type in order_items:
                 influencer = None
                 if influencer_id:
                     influencer = User.objects.filter(pk=influencer_id, role='influencer').first()
@@ -268,6 +279,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                     order=order,
                     product=prod,
                     digital_service=ds,
+                    influencer_ad=ad,
                     quantity=qty,
                     influencer=influencer,
                     topup_account_id=topup_account_id or None,
@@ -290,14 +302,22 @@ class OrderViewSet(viewsets.ModelViewSet):
             if item.product:
                 item.product.stock_quantity = max(0, item.product.stock_quantity - item.quantity)
                 item.product.save(update_fields=['stock_quantity'])
+
+        for item in order.items.select_related('influencer_ad').filter(influencer_ad__isnull=False):
+            AdPurchase.objects.create(
+                ad=item.influencer_ad,
+                buyer=order.customer,
+                amount=item.influencer_ad.price * item.quantity,
+            )
         
         # Digital services: distribute immediately EXCEPT topups (topups wait for admin confirmation).
         is_digital = all(item.digital_service is not None for item in order.items.all())
+        has_physical = order.items.filter(product__isnull=False).exists()
         is_topup = any(
             item.digital_service is not None and item.digital_service.type == 'topup'
             for item in order.items.all()
         )
-        if is_digital and not is_topup:
+        if not has_physical and not is_topup:
             distribute_order_shares(order)
         else:
             # Physical order paid — notify all active drivers

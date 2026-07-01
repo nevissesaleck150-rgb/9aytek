@@ -122,13 +122,13 @@ const styles = {
     logoutBtn: {
         width: '100%',
         padding: '10px',
-        backgroundColor: 'transparent',
-        border: '1px solid #FCA5A5',
-        color: '#EF4444',
+        backgroundColor: '#EF4444',
+        border: '1px solid #EF4444',
+        color: '#000000',
         borderRadius: '8px',
         cursor: 'pointer',
         fontSize: '13px',
-        fontWeight: '600'
+        fontWeight: '700'
     }
 };
 

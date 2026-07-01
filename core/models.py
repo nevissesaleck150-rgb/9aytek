@@ -139,6 +139,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, blank=True)
     digital_service = models.ForeignKey(DigitalService, on_delete=models.CASCADE, null=True, blank=True)
+    influencer_ad = models.ForeignKey('InfluencerAd', on_delete=models.CASCADE, null=True, blank=True)
     influencer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'role': 'influencer'})
     quantity = models.PositiveIntegerField(default=1)
     vendor_ready = models.BooleanField(default=False, help_text="Vendor has marked this item ready")
@@ -152,10 +153,22 @@ class OrderItem(models.Model):
     driver_share = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
 
     def save(self, *args, **kwargs):
-        raw_price = self.product.price if self.product else self.digital_service.price
+        if self.product:
+            raw_price = self.product.price
+        elif self.digital_service:
+            raw_price = self.digital_service.price
+        else:
+            raw_price = self.influencer_ad.price
         unit_price = Decimal(str(raw_price))
         total_item_price = unit_price * self.quantity
-        if self.digital_service:
+        if self.influencer_ad:
+            self.platform_share = Decimal('0.00')
+            self.vendor_share = Decimal('0.00')
+            self.influencer_share = total_item_price
+            self.driver_share = Decimal('0.00')
+            if not self.influencer:
+                self.influencer = self.influencer_ad.influencer
+        elif self.digital_service:
             # Digital service (LMS course or topup) -> 100% platform
             self.platform_share = total_item_price
             self.vendor_share = Decimal('0.00')
@@ -192,9 +205,10 @@ def distribute_order_shares(order):
             if instance.influencer and instance.influencer_share > 0:
                 instance.influencer.wallet_balance += instance.influencer_share
                 instance.influencer.save(update_fields=['wallet_balance'])
+                promoted_item = instance.product or instance.digital_service or instance.influencer_ad
                 WalletTransaction.objects.create(
                     user=instance.influencer, amount=instance.influencer_share, type='sale',
-                    description=f"Commission sur: {instance.product or instance.digital_service} (Commande #{order.id})"
+                    description=f"Commission sur: {promoted_item} (Commande #{order.id})"
                 )
             if order.driver and instance.driver_share > 0:
                 order.driver.wallet_balance += instance.driver_share

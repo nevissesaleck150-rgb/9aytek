@@ -19,23 +19,23 @@ void showAppSnack(
       case MessageType.success:
         backgroundColor = AppColors.success;
       case MessageType.error:
-        backgroundColor = AppColors.primaryBlue;
+        backgroundColor = Colors.red;
       case MessageType.warning:
-        backgroundColor = AppColors.warning;
+        backgroundColor = Colors.red;
       case MessageType.info:
         backgroundColor = AppColors.primaryBlue;
     }
   }
+  final textColor = type == MessageType.error || type == MessageType.warning
+      ? Colors.black
+      : Colors.white;
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
         message,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.black,
-          fontWeight: FontWeight.w500,
-        ),
+        style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
       ),
       behavior: SnackBarBehavior.floating,
       backgroundColor: backgroundColor,

@@ -45,7 +45,7 @@ class RoleRouter {
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Colors.black,
             ),
             child: const Text('Se déconnecter'),
           ),

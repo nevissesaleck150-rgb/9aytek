@@ -12,6 +12,10 @@ class ApiOrderItem {
   final String? topupRechargeType;
   final int? digitalServiceId;
   final int? productId;
+  final int? influencerAdId;
+  final int? influencerId;
+  final String? influencerName;
+  final String? influencerPhone;
 
   ApiOrderItem({
     required this.id,
@@ -27,6 +31,10 @@ class ApiOrderItem {
     this.topupRechargeType,
     this.digitalServiceId,
     this.productId,
+    this.influencerAdId,
+    this.influencerId,
+    this.influencerName,
+    this.influencerPhone,
   });
 
   factory ApiOrderItem.fromJson(Map<String, dynamic> json) {
@@ -44,6 +52,10 @@ class ApiOrderItem {
       topupRechargeType: json['topup_recharge_type'] as String?,
       digitalServiceId: json['digital_service_id'] as int?,
       productId: json['product_id'] as int?,
+      influencerAdId: json['influencer_ad_id'] as int?,
+      influencerId: json['influencer_id'] as int?,
+      influencerName: json['influencer_name'] as String?,
+      influencerPhone: json['influencer_phone'] as String?,
     );
   }
 }

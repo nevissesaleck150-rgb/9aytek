@@ -215,7 +215,11 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
                     Expanded(
                       child: const Text(
                         'Notifications',
-                        style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -235,7 +239,10 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
                     ? const Center(
                         child: Text(
                           'Aucune nouvelle notification',
-                          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       )
                     : ListView.separated(
@@ -243,7 +250,8 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
                         padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemCount: notifications.length,
-                        itemBuilder: (_, i) => _buildNotifTile(notifications[i], ctx),
+                        itemBuilder: (_, i) =>
+                            _buildNotifTile(notifications[i], ctx),
                       ),
               ),
             ],
@@ -301,18 +309,38 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(n.title, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
+                  Text(
+                    n.title,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(n.body, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500)),
+                  Text(
+                    n.body,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   if (buyerPhone != null && buyerPhone.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.phone_outlined, size: 14, color: Colors.green),
+                        const Icon(
+                          Icons.phone_outlined,
+                          size: 14,
+                          color: Colors.green,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           buyerPhone,
-                          style: const TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
@@ -444,7 +472,10 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
             Stack(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_none_outlined, color: Colors.black),
+                  icon: const Icon(
+                    Icons.notifications_none_outlined,
+                    color: Colors.black,
+                  ),
                   onPressed: _openNotificationsSheet,
                 ),
                 if (_unreadCount > 0)
@@ -454,11 +485,21 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
                     child: IgnorePointer(
                       child: Container(
                         padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
                         child: Text(
                           _unreadCount > 99 ? '99+' : '$_unreadCount',
-                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -478,7 +519,7 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.search_outlined),
-            label: 'Recherche Boutiques',
+            label: 'Recherche',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.storefront_outlined),

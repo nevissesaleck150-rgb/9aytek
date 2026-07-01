@@ -39,11 +39,11 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.primaryBlue,
-        foregroundColor: AppColors.textPrimary,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: AppColors.textPrimary,
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.w800,
         ),
@@ -91,10 +91,22 @@ class AppTheme {
           IconThemeData(color: AppColors.primaryBlue),
         ),
       ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          foregroundColor: Colors.white,
+          textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white,
+          textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
       snackBarTheme: const SnackBarThemeData(
         backgroundColor: AppColors.primaryBlue,
         contentTextStyle: TextStyle(
-          color: AppColors.textPrimary,
+          color: Colors.white,
           fontWeight: FontWeight.w700,
         ),
       ),

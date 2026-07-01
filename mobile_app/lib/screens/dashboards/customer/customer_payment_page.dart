@@ -163,6 +163,15 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                                       ],
                                     ),
                                   ],
+                                  if (item.itemType == 'ad' &&
+                                      (item.influencerPhone ?? '')
+                                          .isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    _MetaChip(
+                                      label: 'Influenceur',
+                                      value: item.influencerPhone!,
+                                    ),
+                                  ],
                                 ],
                               ),
                             );

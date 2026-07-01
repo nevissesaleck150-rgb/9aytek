@@ -904,8 +904,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         content: Text(
           cleanMessage,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isSuccess ? Colors.white : Colors.black,
             fontWeight: FontWeight.w700,
           ),
         ),

@@ -830,8 +830,8 @@ class _VendorDashboardState extends State<VendorDashboard> {
             children: [
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: accentBlue,
-                  foregroundColor: primaryBlue,
+                  backgroundColor: primaryBlue,
+                  foregroundColor: Colors.white,
                 ),
                 icon: const Icon(Icons.campaign_outlined),
                 label: Text(
@@ -858,7 +858,9 @@ class _VendorDashboardState extends State<VendorDashboard> {
                         context: context,
                         builder: (ctx) => AlertDialog(
                           backgroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
                           title: const Text(
                             'Confirmation',
                             style: TextStyle(fontWeight: FontWeight.w800),
@@ -877,7 +879,9 @@ class _VendorDashboardState extends State<VendorDashboard> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primaryBlue,
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                               onPressed: () => Navigator.pop(ctx, true),
                               child: const Text('Confirmer'),

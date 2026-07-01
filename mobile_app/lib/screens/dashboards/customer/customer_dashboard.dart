@@ -163,11 +163,61 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     if (!mounted) return;
     setState(() {
       if (res.isSuccess) {
-        // Deduplicate by vendorId
-        final seen = <int>{};
-        _shops = (res.data ?? []).where((s) => seen.add(s.vendorId)).toList();
+        _shops = _uniqueShops(res.data ?? []);
       }
     });
+  }
+
+  List<ApiShop> _uniqueShops(List<ApiShop> shops) {
+    final seen = <String>{};
+    return shops.where((shop) {
+      final key = shop.id > 0
+          ? 'shop:${shop.id}'
+          : 'vendor:${shop.vendorId}:${shop.name.trim().toLowerCase()}:${shop.category.trim().toLowerCase()}';
+      return seen.add(key);
+    }).toList();
+  }
+
+  String _normalizeShopCategory(String raw) {
+    final value = raw.trim().toLowerCase();
+    if (value.isEmpty) return '';
+    if (shopCategories.any((category) => category.id == value)) return value;
+    if (value.contains('mode') ||
+        value.contains('vêtement') ||
+        value.contains('vetement') ||
+        value.contains('vÃªtement') ||
+        value.contains('v�tement') ||
+        value.contains('fashion')) {
+      return 'fashion';
+    }
+    if (value.contains('aliment') ||
+        value.contains('boisson') ||
+        value.contains('restaurant') ||
+        value.contains('café') ||
+        value.contains('caf')) {
+      return 'food';
+    }
+    if (value.contains('ménager') ||
+        value.contains('menager') ||
+        value.contains('mÃ©nager') ||
+        value.contains('m�nager') ||
+        value.contains('maison') ||
+        value.contains('home')) {
+      return 'home';
+    }
+    if (value.contains('supermarch') ||
+        value.contains('produits alimentaire') ||
+        value.contains('épice') ||
+        value.contains('epice')) {
+      return 'supermarket';
+    }
+    if (value.contains('électron') ||
+        value.contains('electron') ||
+        value.contains('technologie') ||
+        value.contains('tech')) {
+      return 'electronics';
+    }
+    return value;
   }
 
   Future<void> _loadOrders() async {
@@ -791,20 +841,34 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final amount = itemsToCheckout.fold(0, (sum, item) => sum + item.subtotal);
 
     // Create Order on Backend directly (skip payment sheet)
-    final itemsPayload = itemsToCheckout
-        .map(
-          (item) => {
-            if (item.product != null) 'product': item.product!.id,
-            if (item.digitalService != null)
-              'digital_service': item.digitalService!['id'],
-            'quantity': item.quantity,
-            if (item.influencerId != null) 'influencer': item.influencerId,
-            if (item.isTopup) 'topup_account_id': item.topupAccountId,
-            if (item.isTopup) 'topup_payer': item.topupPayer,
-            if (item.isTopup) 'topup_recharge_type': item.topupRechargeType,
-          },
-        )
-        .toList();
+    final itemsPayload = <Map<String, dynamic>>[];
+    for (final item in itemsToCheckout) {
+      final payload = <String, dynamic>{'quantity': item.quantity};
+      if (item.isAd) {
+        final adId = item.resolvedAdId;
+        if (adId == null) {
+          showAppSnack(
+            context,
+            'Veuillez retirer cette annonce du panier puis l’ajouter à nouveau.',
+            type: MessageType.error,
+          );
+          return;
+        }
+        payload['influencer_ad'] = adId;
+      } else {
+        if (item.product != null) payload['product'] = item.product!.id;
+        if (item.digitalService != null) {
+          payload['digital_service'] = item.digitalService!['id'];
+        }
+      }
+      if (item.influencerId != null) payload['influencer'] = item.influencerId;
+      if (item.isTopup) payload['topup_account_id'] = item.topupAccountId;
+      if (item.isTopup) payload['topup_payer'] = item.topupPayer;
+      if (item.isTopup) {
+        payload['topup_recharge_type'] = item.topupRechargeType;
+      }
+      itemsPayload.add(payload);
+    }
 
     final orderRes = await _api.createOrderWithItems(token, itemsPayload);
     if (!mounted) return;
@@ -831,9 +895,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           false;
       if (!mounted || !paid) return;
 
-      // Check if any purchased items are ads
-      final purchasedAds = itemsToCheckout.where((item) => item.isAd).toList();
-
       setState(() {
         // Remove only checked items from cart
         final indicesToRemove = _selectedCartItems.isEmpty
@@ -849,73 +910,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       _persistCart();
       _loadOrders();
 
-      // Show success message with influencer phone if ad was purchased
-      final purchasedTopups = itemsToCheckout
-          .where((item) => item.isTopup)
-          .toList();
-
-      if (purchasedAds.isNotEmpty) {
-        final adPhone = purchasedAds.first.adPhone ?? 'Non disponible';
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('✓ Paiement confirmé'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Commande de ${formatMru(amount)} enregistrée avec succès',
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                const Text(
-                  'Contacter l\'influenceur:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                SelectableText(
-                  adPhone,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: primaryBlue,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      } else if (purchasedTopups.isNotEmpty) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Paiement confirme'),
-            content: const Text(
-              'La demande de recharge a ete envoyee. Elle reste en attente jusqu\'a son traitement par l\'administrateur.',
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        showAppSnack(
-          context,
-          'Commande payée et enregistrée de ${formatMru(amount)}',
-          type: MessageType.success,
-        );
-      }
+      showAppSnack(
+        context,
+        'Commande payée et enregistrée de ${formatMru(amount)}',
+        type: MessageType.success,
+      );
     } else {
       showAppSnack(
         context,
@@ -1463,10 +1462,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
     List<ApiShop> shops;
     if (_shops.isNotEmpty) {
-      // Deduplicate by vendorId and normalize empty categories
-      final seen = <int>{};
-      shops = _shops
-          .where((s) => seen.add(s.vendorId))
+      shops = _uniqueShops(_shops)
           .map(
             (s) => s.category.trim().isEmpty
                 ? s.copyWith(category: defaultCategory)
@@ -1493,7 +1489,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     }
 
     // Keep only shops matching the selected category id
-    shops = shops.where((s) => s.category == category.id).toList();
+    shops = shops
+        .where((s) => _normalizeShopCategory(s.category) == category.id)
+        .toList();
 
     showModalBottomSheet(
       context: context,
@@ -1576,7 +1574,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
-                        shop.category,
+                        category.name,
                         style: const TextStyle(
                           color: Colors.black54,
                           fontSize: 13,
@@ -1881,8 +1879,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
-                        errorWidget: (_, __, ___) =>
-                            _buildAdImagePlaceholder(),
+                        errorWidget: (_, __, ___) => _buildAdImagePlaceholder(),
                       )
                     : _buildAdImagePlaceholder(),
               ),
@@ -2013,19 +2010,39 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   }
 
   void _addAdToCart(InfluencerAd ad) {
-    // Treat ad as a special product
-    final adAsProduct = ApiProduct(
-      id: -ad.id,
-      name: 'Annonce: ${ad.description}',
-      description: ad.description,
-      priceMru: ad.priceMru,
-      imagePath: null,
-      vendorId: ad.influencerId,
-      vendorName: ad.influencerName,
-      stockQuantity: 1,
-    );
+    final alreadyInCart = _cart.any((item) => item.isAd && item.adId == ad.id);
+    if (alreadyInCart) {
+      showAppSnack(
+        context,
+        'Cette annonce est déjà dans votre panier',
+        type: MessageType.warning,
+      );
+      setState(() => _currentIndex = 1);
+      return;
+    }
 
-    _addToCart(adAsProduct, isAd: true, adPhone: ad.influencerPhone);
+    setState(() {
+      _cart.add(
+        CartItem(
+          isAd: true,
+          adId: ad.id,
+          adDescription: ad.description,
+          adPriceMru: ad.priceMru,
+          adImageUrl: ad.imageUrl,
+          adPhone: ad.influencerPhone,
+          influencerId: ad.influencerId,
+          adInfluencerName: ad.influencerName,
+        ),
+      );
+      _selectedCartItems.add(_cart.length - 1);
+      _currentIndex = 1;
+    });
+    _persistCart();
+    showAppSnack(
+      context,
+      'Annonce ajoutée au panier',
+      type: MessageType.success,
+    );
   }
 
   void _showStoreProducts(
@@ -2344,51 +2361,66 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                     ],
                                   ),
                                   const SizedBox(height: 14),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 10,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
                                     children: [
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '$price UM',
-                                            style: TextStyle(
-                                              color: successGreen,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                      SizedBox(
+                                        width: 120,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '$price UM',
+                                              style: TextStyle(
+                                                color: successGreen,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '$buyerCount apprenants',
-                                            style: const TextStyle(
-                                              color: Colors.black54,
-                                              fontSize: 12,
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '$buyerCount apprenants',
+                                              style: const TextStyle(
+                                                color: Colors.black54,
+                                                fontSize: 12,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                      FilledButton.icon(
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: primaryBlue,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 180,
+                                          maxWidth: 260,
+                                        ),
+                                        child: FilledButton.icon(
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: primaryBlue,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 10,
+                                            ),
                                           ),
-                                        ),
-                                        onPressed: () {
-                                          Navigator.pop(ctx);
-                                          _addCourseToCart(item);
-                                        },
-                                        icon: const Icon(
-                                          Icons.add_shopping_cart,
-                                          size: 18,
-                                        ),
-                                        label: const Text(
-                                          'Ajouter au panier',
-                                          overflow: TextOverflow.ellipsis,
+                                          onPressed: () {
+                                            Navigator.pop(ctx);
+                                            _addCourseToCart(item);
+                                          },
+                                          icon: const Icon(
+                                            Icons.add_shopping_cart,
+                                            size: 18,
+                                          ),
+                                          label: const Text(
+                                            'Ajouter au panier',
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -2601,182 +2633,212 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           final imageUrl = ApiConfig.mediaUrl(selectedApp['image'] as String?);
           final description = selectedApp['description']?.toString() ?? '';
 
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              left: 20,
-              right: 20,
-              top: 20,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  "Recharge d'application",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                // App selector when multiple top-up services exist.
-                if (apps.length > 1) ...[
-                  SizedBox(
-                    height: 42,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: apps.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final app = apps[i];
-                        final selected = app['id'] == selectedApp['id'];
-                        return ChoiceChip(
-                          label: Text(app['title']?.toString() ?? ''),
-                          selected: selected,
-                          onSelected: (_) =>
-                              setModalState(() => selectedApp = app),
-                          selectedColor: primaryBlue,
-                          labelStyle: TextStyle(
-                            color: selected ? Colors.white : null,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        );
-                      },
-                    ),
+          return DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.72,
+            minChildSize: 0.45,
+            maxChildSize: 0.92,
+            builder: (sheetContext, scrollController) {
+              return SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                    left: 20,
+                    right: 20,
+                    top: 20,
                   ),
-                  const SizedBox(height: 16),
-                ],
-                // Selected app information card.
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: accentBlue),
-                  ),
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (imageUrl != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            width: 62,
-                            height: 62,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => Container(
-                              width: 62,
-                              height: 62,
-                              color: accentBlue,
-                              child: Icon(
-                                Icons.phone_android,
-                                color: primaryBlue,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Container(
-                          width: 62,
-                          height: 62,
-                          decoration: BoxDecoration(
-                            color: accentBlue,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(Icons.phone_android, color: primaryBlue),
+                      const Text(
+                        "Recharge d'application",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
+                      ),
+                      const SizedBox(height: 16),
+                      // App selector when multiple top-up services exist.
+                      if (apps.length > 1) ...[
+                        SizedBox(
+                          height: 42,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: apps.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (_, i) {
+                              final app = apps[i];
+                              final selected = app['id'] == selectedApp['id'];
+                              return ChoiceChip(
+                                label: Text(app['title']?.toString() ?? ''),
+                                selected: selected,
+                                onSelected: (_) =>
+                                    setModalState(() => selectedApp = app),
+                                selectedColor: primaryBlue,
+                                labelStyle: TextStyle(
+                                  color: selected ? Colors.white : null,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      // Selected app information card.
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: accentBlue),
+                        ),
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              selectedApp['title']?.toString() ?? '',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                            if (imageUrl != null)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  width: 62,
+                                  height: 62,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => Container(
+                                    width: 62,
+                                    height: 62,
+                                    color: accentBlue,
+                                    child: Icon(
+                                      Icons.phone_android,
+                                      color: primaryBlue,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                width: 62,
+                                height: 62,
+                                decoration: BoxDecoration(
+                                  color: accentBlue,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.phone_android,
+                                  color: primaryBlue,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              description.isEmpty
-                                  ? 'Aucune description disponible'
-                                  : description,
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 13,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    selectedApp['title']?.toString() ?? '',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    description.isEmpty
+                                        ? 'Aucune description disponible'
+                                        : description,
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _buildInfoChip('Service', 'Recharge'),
+                                      _buildInfoChip('Prix', '$price UM'),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _buildInfoChip('Service', 'Recharge'),
-                                _buildInfoChip('Prix', '$price UM'),
-                              ],
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: idController,
+                        decoration: InputDecoration(
+                          labelText:
+                              selectedApp['required_field_name'] ??
+                              'Identifiant du compte',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.person_outline),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Total: $price UM',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: primaryBlue,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: () {
+                            final idVal = idController.text.trim();
+                            if (idVal.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    selectedApp['required_field_name'] != null
+                                        ? 'Veuillez saisir ${selectedApp['required_field_name']}'
+                                        : "Veuillez saisir l'identifiant",
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                            Navigator.pop(ctx);
+                            _addTopupToCart(
+                              app: selectedApp,
+                              rechargeType: 'standard',
+                              accountId: idVal,
+                              payer: autoPayer,
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.shopping_cart_outlined,
+                            size: 18,
+                          ),
+                          label: const Text(
+                            'Ajouter au panier',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: idController,
-                  decoration: InputDecoration(
-                    labelText:
-                        selectedApp['required_field_name'] ??
-                        'Identifiant du compte',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.person_outline),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total: $price UM',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: primaryBlue,
-                      ),
-                      onPressed: () {
-                        final idVal = idController.text.trim();
-                        if (idVal.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                selectedApp['required_field_name'] != null
-                                    ? 'Veuillez saisir ${selectedApp['required_field_name']}'
-                                    : "Veuillez saisir l'identifiant",
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-                        Navigator.pop(ctx);
-                        _addTopupToCart(
-                          app: selectedApp,
-                          rechargeType: 'standard',
-                          accountId: idVal,
-                          payer: autoPayer,
-                        );
-                      },
-                      icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-                      label: const Text('Ajouter au panier'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -3515,6 +3577,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   Widget _buildOrderItemRow(ApiOrderItem item) {
     final isTopup = item.itemType == 'topup';
     final isCourse = item.itemType == 'course';
+    final isAd = item.itemType == 'ad';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -3527,19 +3590,37 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              item.itemName,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                color: Colors.black,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.itemName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (isAd && (item.influencerPhone ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Influenceur: ${item.influencerPhone}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: primaryBlue,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(width: 8),
-          if (!isTopup && !isCourse)
+          if (!isTopup && !isCourse && !isAd)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -3666,7 +3747,12 @@ class CartItem {
   int quantity;
   final int? influencerId;
   final bool isAd;
+  final int? adId;
+  final String? adDescription;
+  final int? adPriceMru;
+  final String? adImageUrl;
   final String? adPhone;
+  final String? adInfluencerName;
   final String? topupAccountId;
   final String? topupPayer;
   final String? topupRechargeType;
@@ -3677,7 +3763,12 @@ class CartItem {
     this.quantity = 1,
     this.influencerId,
     this.isAd = false,
+    this.adId,
+    this.adDescription,
+    this.adPriceMru,
+    this.adImageUrl,
     this.adPhone,
+    this.adInfluencerName,
     this.topupAccountId,
     this.topupPayer,
     this.topupRechargeType,
@@ -3686,17 +3777,27 @@ class CartItem {
   factory CartItem.fromJson(Map<String, dynamic> json) {
     final productJson = json['product'];
     final serviceJson = json['digital_service'];
+    final product = productJson is Map<String, dynamic>
+        ? ApiProduct.fromJson(productJson)
+        : null;
+    final isAd = json['is_ad'] == true;
+    final legacyAdId = isAd && product != null && product.id < 0
+        ? -product.id
+        : null;
     return CartItem(
-      product: productJson is Map<String, dynamic>
-          ? ApiProduct.fromJson(productJson)
-          : null,
+      product: product,
       digitalService: serviceJson is Map<String, dynamic> ? serviceJson : null,
       quantity: _toInt(json['quantity'], fallback: 1),
       influencerId: json['influencer_id'] is int
           ? json['influencer_id'] as int
           : int.tryParse('${json['influencer_id']}'),
-      isAd: json['is_ad'] == true,
+      isAd: isAd,
+      adId: _nullableInt(json['ad_id']) ?? legacyAdId,
+      adDescription: json['ad_description'] as String? ?? product?.description,
+      adPriceMru: _nullableInt(json['ad_price_mru']) ?? product?.priceMru,
+      adImageUrl: json['ad_image_url'] as String? ?? product?.imageUrl,
       adPhone: json['ad_phone'] as String?,
+      adInfluencerName: json['ad_influencer_name'] as String?,
       topupAccountId: json['topup_account_id'] as String?,
       topupPayer: json['topup_payer'] as String?,
       topupRechargeType: json['topup_recharge_type'] as String?,
@@ -3705,14 +3806,26 @@ class CartItem {
 
   bool get isTopup => digitalService?['type'] == 'topup';
   bool get isCourse => digitalService?['type'] == 'course';
+  int? get resolvedAdId {
+    if (!isAd) return null;
+    if (adId != null) return adId;
+    final productId = product?.id;
+    if (productId != null && productId < 0) return -productId;
+    return null;
+  }
 
-  String get title =>
-      product?.name ?? digitalService?['title']?.toString() ?? '';
+  String get title => isAd
+      ? 'Annonce: ${(adDescription ?? product?.description ?? '').trim()}'
+      : product?.name ?? digitalService?['title']?.toString() ?? '';
 
-  String get description =>
-      product?.description ?? digitalService?['description']?.toString() ?? '';
+  String get description => isAd
+      ? adDescription ?? ''
+      : product?.description ??
+            digitalService?['description']?.toString() ??
+            '';
 
   int get unitPrice {
+    if (isAd) return adPriceMru ?? 0;
     if (product != null) return product!.priceMru;
     final value = digitalService?['price'];
     if (value is int) return value;
@@ -3720,6 +3833,7 @@ class CartItem {
   }
 
   String? get imageUrl {
+    if (isAd) return adImageUrl;
     if (product != null) return product!.imageUrl;
     return ApiConfig.mediaUrl(digitalService?['image'] as String?);
   }
@@ -3744,7 +3858,12 @@ class CartItem {
       'quantity': quantity,
       'influencer_id': influencerId,
       'is_ad': isAd,
+      'ad_id': adId,
+      'ad_description': adDescription,
+      'ad_price_mru': adPriceMru,
+      'ad_image_url': adImageUrl,
       'ad_phone': adPhone,
+      'ad_influencer_name': adInfluencerName,
       'topup_account_id': topupAccountId,
       'topup_payer': topupPayer,
       'topup_recharge_type': topupRechargeType,
@@ -3754,5 +3873,11 @@ class CartItem {
   static int _toInt(dynamic value, {int fallback = 0}) {
     if (value is int) return value;
     return int.tryParse('$value') ?? fallback;
+  }
+
+  static int? _nullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse('$value');
   }
 }

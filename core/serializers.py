@@ -213,6 +213,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
     content_link = serializers.ReadOnlyField(source='digital_service.content_link')
     digital_service_id = serializers.ReadOnlyField(source='digital_service.id')
     product_id = serializers.ReadOnlyField(source='product.id')
+    influencer_ad_id = serializers.ReadOnlyField(source='influencer_ad.id')
+    influencer_id = serializers.SerializerMethodField()
+    influencer_name = serializers.SerializerMethodField()
+    influencer_phone = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
@@ -222,7 +226,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
             'vendor_share', 'influencer_share', 'platform_share', 'driver_share',
             'vendor_ready', 'vendor_id',
             'created_at', 'content_link', 'topup_account_id', 'topup_payer', 'topup_recharge_type',
-            'digital_service_id', 'product_id',
+            'digital_service_id', 'product_id', 'influencer_ad_id',
+            'influencer_id', 'influencer_name', 'influencer_phone',
         ]
 
     def get_vendor_id(self, obj):
@@ -231,6 +236,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
         return None
 
     def get_item_name(self, obj):
+        if obj.influencer_ad:
+            return f"Annonce: {obj.influencer_ad.description}"
         if obj.product:
             return obj.product.name
         if obj.digital_service:
@@ -238,6 +245,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
         return "Inconnu"
 
     def get_item_description(self, obj):
+        if obj.influencer_ad:
+            return obj.influencer_ad.description
         if obj.product:
             return obj.product.description
         if obj.digital_service:
@@ -245,11 +254,28 @@ class OrderItemSerializer(serializers.ModelSerializer):
         return ""
 
     def get_item_type(self, obj):
+        if obj.influencer_ad:
+            return 'ad'
         if obj.digital_service:
             return obj.digital_service.type
         if obj.product:
             return 'product'
         return None
+
+    def get_influencer_id(self, obj):
+        if obj.influencer:
+            return obj.influencer_id
+        if obj.influencer_ad:
+            return obj.influencer_ad.influencer_id
+        return None
+
+    def get_influencer_name(self, obj):
+        influencer = obj.influencer or (obj.influencer_ad.influencer if obj.influencer_ad else None)
+        return influencer.username if influencer else None
+
+    def get_influencer_phone(self, obj):
+        influencer = obj.influencer or (obj.influencer_ad.influencer if obj.influencer_ad else None)
+        return influencer.phone if influencer else None
 
 # 5. Order serializer.
 class OrderSerializer(serializers.ModelSerializer):
@@ -334,6 +360,7 @@ class OrderSerializer(serializers.ModelSerializer):
 class OrderItemInputSerializer(serializers.Serializer):
     product = serializers.IntegerField(required=False, allow_null=True)
     digital_service = serializers.IntegerField(required=False, allow_null=True)
+    influencer_ad = serializers.IntegerField(required=False, allow_null=True)
     quantity = serializers.IntegerField(min_value=1, default=1)
     influencer = serializers.IntegerField(required=False, allow_null=True)
     topup_account_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
