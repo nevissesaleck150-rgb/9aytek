@@ -723,7 +723,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         ),
       );
       _selectedCartItems.add(_cart.length - 1);
-      _currentIndex = 1;
     });
     _persistCart();
     showAppSnack(
@@ -745,13 +744,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         'Ce cours est déjà dans votre panier',
         type: MessageType.warning,
       );
-      setState(() => _currentIndex = 1);
       return;
     }
     setState(() {
       _cart.add(CartItem(digitalService: course, quantity: 1));
       _selectedCartItems.add(_cart.length - 1);
-      _currentIndex = 1;
     });
     _persistCart();
     showAppSnack(
@@ -2097,7 +2094,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         'Cette annonce est déjà dans votre panier',
         type: MessageType.warning,
       );
-      setState(() => _currentIndex = 1);
       return;
     }
 
@@ -2115,7 +2111,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         ),
       );
       _selectedCartItems.add(_cart.length - 1);
-      _currentIndex = 1;
     });
     _persistCart();
     showAppSnack(
