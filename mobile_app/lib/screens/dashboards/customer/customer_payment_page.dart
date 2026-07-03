@@ -70,16 +70,6 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
   }
 
   Future<void> _handlePayment() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _FactureDialog(
-        order: widget.order,
-        cartItems: widget.cartItems,
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
     if (_isPaying) return;
     setState(() => _isPaying = true);
     final error = await widget.onPayWithBankily();
@@ -87,6 +77,15 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
     setState(() => _isPaying = false);
 
     if (error == null) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => _FactureDialog(
+          order: widget.order,
+          cartItems: widget.cartItems,
+        ),
+      );
+      if (!mounted) return;
       Navigator.pop(context, true);
       return;
     }
@@ -412,7 +411,7 @@ class _FactureDialog extends StatelessWidget {
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Prenez une capture d\'écran de cette facture comme preuve de paiement',
+                              'Prenez une capture d\'écran de cette facture comme preuve de votre paiement',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF92400E),
@@ -430,49 +429,25 @@ class _FactureDialog extends StatelessWidget {
               ),
             ),
 
-            // Fixed action buttons
+            // Fixed action button
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: AppColors.primaryBlue),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Fermer',
-                        style: TextStyle(
-                          color: AppColors.primaryBlue,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primaryBlue,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Confirmer et payer',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
+                ),
+                child: const Text(
+                  'Fermer',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
                   ),
-                ],
+                ),
               ),
             ),
           ],
