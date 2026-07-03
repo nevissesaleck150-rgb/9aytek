@@ -944,6 +944,19 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             MaterialPageRoute(
               builder: (_) => CustomerPaymentPage(
                 order: order,
+                cartItems: itemsToCheckout.map((item) => FactureItem(
+                  title: item.title,
+                  unitPrice: item.unitPrice,
+                  quantity: item.quantity,
+                  subtotal: item.subtotal,
+                  isAd: item.isAd,
+                  isTopup: item.isTopup,
+                  vendorName: item.product?.vendorName,
+                  influencerName: item.adInfluencerName,
+                  influencerPhone: item.adPhone,
+                  topupAccountId: item.topupAccountId,
+                  topupPayer: item.topupPayer,
+                )).toList(),
                 onPayWithBankily: () async {
                   final paymentRes = await _api.confirmBankilyOrder(
                     token,
