@@ -40,6 +40,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   final List<CartItem> _cart = [];
   final Set<int> _favorites = {};
   final Set<int> _selectedCartItems = {};
+
+  String get _favoritesStorageKey =>
+      'customer_favorites_${widget.user.id}_${widget.user.username}';
   List<Map<String, dynamic>> _influencerUsers = [];
 
   bool _loadingProducts = true;
@@ -61,6 +64,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       });
     });
     _restoreCart();
+    _restoreFavorites();
     _refreshData();
   }
 
@@ -114,6 +118,30 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     } catch (_) {
       // Ignore invalid cached cart content.
     }
+  }
+
+  Future<void> _persistFavorites() async {
+    try {
+      await _storage.write(
+        key: _favoritesStorageKey,
+        value: jsonEncode(_favorites.toList()),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _restoreFavorites() async {
+    try {
+      final raw = await _storage.read(key: _favoritesStorageKey);
+      if (raw == null || raw.isEmpty) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return;
+      if (!mounted) return;
+      setState(() {
+        _favorites
+          ..clear()
+          ..addAll(decoded.whereType<int>());
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadInfluencers() async {
@@ -741,6 +769,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         _favorites.add(product.id);
       }
     });
+    _persistFavorites();
   }
 
   void _showProductImage(
