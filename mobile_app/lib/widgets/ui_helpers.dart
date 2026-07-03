@@ -17,18 +17,16 @@ void showAppSnack(
   } else {
     switch (type) {
       case MessageType.success:
-        backgroundColor = AppColors.success;
+        backgroundColor = AppColors.primaryBlue;
       case MessageType.error:
         backgroundColor = Colors.red;
       case MessageType.warning:
-        backgroundColor = Colors.red;
+        backgroundColor = AppColors.primaryBlue;
       case MessageType.info:
         backgroundColor = AppColors.primaryBlue;
     }
   }
-  final textColor = type == MessageType.error || type == MessageType.warning
-      ? Colors.black
-      : Colors.white;
+  final textColor = type == MessageType.error ? Colors.black : Colors.white;
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
