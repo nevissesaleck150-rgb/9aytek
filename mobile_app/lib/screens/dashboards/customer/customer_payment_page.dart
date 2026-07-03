@@ -299,7 +299,7 @@ class _FactureDialog extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black54,
+                            color: AppColors.primaryBlue,
                             letterSpacing: 2,
                           ),
                         ),
@@ -347,7 +347,7 @@ class _FactureDialog extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              color: Colors.black45,
+                              color: AppColors.primaryBlue,
                               letterSpacing: 1.5,
                             ),
                           ),
@@ -506,7 +506,7 @@ class _FactureItemRow extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${item.quantity} × ${formatMru(item.unitPrice)}',
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: const TextStyle(fontSize: 12, color: AppColors.primaryBlue),
             ),
           ],
 
@@ -532,7 +532,7 @@ class _FactureItemRow extends StatelessWidget {
               _InfoChip(
                 icon: Icons.phone_outlined,
                 text: item.influencerPhone!,
-                color: Colors.green,
+                color: AppColors.primaryBlue,
               ),
             ],
           ],
@@ -612,7 +612,7 @@ class _FactureLabel extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Colors.black54),
+          style: const TextStyle(fontSize: 11, color: AppColors.primaryBlue),
         ),
         const SizedBox(height: 2),
         Text(
