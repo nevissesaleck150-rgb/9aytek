@@ -98,8 +98,20 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
   }
 
   // Get distinct stores
+  // Returns the display name for a vendor: shop name if available, else vendorName.
+  String _displayNameForVendor(int vendorId, String fallbackVendorName) {
+    final shop = _shops.cast<ApiShop?>().firstWhere(
+      (s) => s!.vendorId == vendorId && s.name.isNotEmpty,
+      orElse: () => null,
+    );
+    return shop?.name ?? fallbackVendorName;
+  }
+
   List<String> get _filteredStores {
-    final stores = _allProducts.map((p) => p.vendorName).toSet().toList();
+    final stores = _allProducts
+        .map((p) => _displayNameForVendor(p.vendorId, p.vendorName))
+        .toSet()
+        .toList();
     if (_storeSearchQuery.isNotEmpty) {
       return stores
           .where((s) => s.toLowerCase().contains(_storeSearchQuery))
@@ -110,7 +122,7 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
 
   String? _shopImageForStore(String storeName) {
     final shop = _shops.cast<ApiShop?>().firstWhere(
-      (s) => s!.name == storeName || s.vendorName == storeName,
+      (s) => s!.name == storeName,
       orElse: () => null,
     );
     final image = shop?.image;
@@ -357,7 +369,7 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
   // --- Modal Sheets ---
   void _exploreStore(String storeName) {
     final storeProducts = _allProducts
-        .where((p) => p.vendorName == storeName)
+        .where((p) => _displayNameForVendor(p.vendorId, p.vendorName) == storeName)
         .toList();
     showModalBottomSheet(
       context: context,
