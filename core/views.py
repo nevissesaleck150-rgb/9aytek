@@ -616,6 +616,9 @@ class MarketingRequestViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Seuls les influenceurs peuvent envoyer des demandes')
         product = serializer.validated_data['product']
+        if MarketingRequest.objects.filter(influencer=self.request.user, product=product).exists():
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+            raise DRFValidationError({'detail': 'already_requested'})
         serializer.save(influencer=self.request.user, vendor=product.vendor)
 
     @action(detail=True, methods=['post'])

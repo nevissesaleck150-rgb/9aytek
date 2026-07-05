@@ -415,6 +415,10 @@ class MarketingRequestSerializer(serializers.ModelSerializer):
         model = MarketingRequest
         fields = ['id', 'influencer', 'influencer_name', 'vendor', 'vendor_name', 'product', 'product_name', 'product_image', 'status', 'created_at']
         read_only_fields = ['status', 'created_at', 'influencer', 'vendor']
+        # Disable auto-generated UniqueTogetherValidator: it requires 'influencer'
+        # in the request body, but 'influencer' is read-only and injected in
+        # perform_create. Uniqueness is checked manually there instead.
+        validators = []
 
     def get_product_image(self, obj):
         if obj.product and obj.product.image:

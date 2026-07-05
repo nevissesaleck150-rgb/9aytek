@@ -145,7 +145,7 @@ class _InfluencerDashboardState extends State<InfluencerDashboard> {
       );
     } else {
       final err = res.error ?? '';
-      if (err.contains('unique') || err.contains('already')) {
+      if (err.contains('unique') || err.contains('already') || err.contains('already_requested')) {
         showAppSnack(
           context,
           "Vous avez déjà demandé ce produit",
