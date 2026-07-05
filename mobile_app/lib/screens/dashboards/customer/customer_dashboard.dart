@@ -1234,7 +1234,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.76,
+                            childAspectRatio: 0.68,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
@@ -1270,29 +1270,28 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                         product.imageUrl != null
                                             ? CachedNetworkImage(
                                                 imageUrl: product.imageUrl!,
-                                                fit: BoxFit.cover,
+                                                fit: BoxFit.contain,
                                                 placeholder: (_, __) =>
                                                     Container(
-                                                      color: accentBlue,
+                                                      color: Colors.white,
                                                     ),
                                                 errorWidget: (_, __, ___) =>
                                                     Container(
-                                                      color:
-                                                          AppColors.lightBlue,
+                                                      color: Colors.white,
                                                       child: Icon(
                                                         Icons
                                                             .image_not_supported_outlined,
-                                                        color:
-                                                            AppColors.lightBlue,
+                                                        color: accentBlue,
+                                                        size: 40,
                                                       ),
                                                     ),
                                               )
                                             : Container(
-                                                color: accentBlue,
+                                                color: Colors.white,
                                                 child: Icon(
                                                   Icons.shopping_bag_outlined,
                                                   color: primaryBlue,
-                                                  size: 36,
+                                                  size: 40,
                                                 ),
                                               ),
                                         Positioned(
